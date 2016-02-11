@@ -3,38 +3,14 @@
 #include "itkJPEGImageIOFactory.h"
 #include "itkImageRegionIterator.h"
 #include "QuickView.h"
-#include "itkNearestNeighborInterpolateImageFunction.h"
-#include "itkLinearInterpolateImageFunction.h"
-#include "itkResampleImageFilter.h"
-
-
-#include "itkImage.h"
-#include "itkImageFileReader.h"
-#include "itkIdentityTransform.h"
-#include "itkLabelImageGaussianInterpolateImageFunction.h"
-#include "itkNearestNeighborInterpolateImageFunction.h"
-#include "itkResampleImageFilter.h"
-
-#include "itkCustomColormapFunction.h"
-#include "itkScalarToRGBColormapImageFilter.h"
-#include "itkRGBPixel.h"
-#include "itkMersenneTwisterRandomVariateGenerator.h"
-
-
-
-#include "itkMutualInformationImageToImageMetric.h"
-#include "itkRandomImageSource.h"
-#include "itkTranslationTransform.h"
-#include "itkLinearInterpolateImageFunction.h"
-
 
 unsigned long long min(unsigned long long val1, unsigned long long val2);
 
 int main(int, char **)
 {
-    char inputFile1[] = "C:/Users/bmi/Documents/GitHub/lab4/1.jpg";
-    char inputFile2[] = "C:/Users/bmi/Documents/GitHub/Lab4/2.jpg";
-    char inputFile3[] = "C:/Users/bmi/Documents/GitHub/Lab4/3.jpg";
+    char inputFile1[] = "C:/Users/Computron/Documents/GitHub/lab4/1.jpg";
+    char inputFile2[] = "C:/Users/Computron/Documents/GitHub/Lab4/2.jpg";
+    char inputFile3[] = "C:/Users/Computron/Documents/GitHub/Lab4/3.jpg";
 
     unsigned long long oneToTwoCount = 0;
     unsigned long long twoToThreeCount = 0;
@@ -92,20 +68,9 @@ int main(int, char **)
     itk::ImageRegionIterator<ImageType> imageIterator2(image2, region);
     itk::ImageRegionIterator<ImageType> imageIterator3(image3, region);
 
-    imageIterator1.GoToBegin();
-    imageIterator2.GoToBegin();
-    imageIterator3.GoToBegin();
-
     while(!imageIterator1.IsAtEnd())
     {
-      // Get the value of the current pixel
-      //unsigned char val = imageIterator.Get();
-      //std::cout << (int)val << std::endl;
 
-      // Set the current pixel to white
-      //imageIterator.Set(255);
-
-      //divide by 2 so that the number doesn't increment as fast, and you don't run out of space
       oneToTwoCount += std::abs(imageIterator2.Get() - imageIterator1.Get());
       twoToThreeCount += std::abs(imageIterator3.Get() - imageIterator2.Get());
       threeToOneCount += std::abs(imageIterator1.Get() - imageIterator3.Get());
@@ -163,46 +128,51 @@ int main(int, char **)
     /// Interpolate new photo
     //////////////////////////////////
 
-    typedef itk::MutualInformationImageToImageMetric<ImageType, ImageType >    MetricType;
-
-    typedef itk::TranslationTransform<double, 2> TranslationTransformType; // This cannot be float for some reason?
-      TranslationTransformType::Pointer transform = TranslationTransformType::New();
-
-    MetricType::Pointer metric = MetricType::New();
-
-    metric->SetTransform(transform);
-
- //   metric->SetFixedImageStandardDeviation(  4 );
- //   metric->SetMovingImageStandardDeviation( 4 );
-
-    metric->SetFixedImage(fixedImage);
-    metric->SetMovingImage(movingImage);
-
-    metric->SetFixedImageRegion(fixedImage->GetLargestPossibleRegion());
-
-    itk::LinearInterpolateImageFunction<ImageType, double>::Pointer interpolator = itk::LinearInterpolateImageFunction<ImageType, double>::New();
-    interpolator->SetInputImage(fixedImage);
-    metric->SetInterpolator(interpolator);
 
 
- /*   itk::ImageRegionIterator<ImageType> wrongIterator(wrongImage, region); //region is same
+    itk::ImageRegionIterator<ImageType> wrongIterator(wrongImage, region); //region is same
     itk::ImageRegionIterator<ImageType> rightIterator1(rightImage1, region);
     itk::ImageRegionIterator<ImageType> rightIterator2(rightImage2, region);
-
-    wrongIterator.GoToBegin();
-    rightIterator1.GoToBegin();
-    rightIterator2.GoToBegin();
 
     while(!wrongIterator.IsAtEnd())
     {
 
-      wrongIterator.Set((rightIterator2.Get() + rightIterator1.Get()) / 2);
+      unsigned char rightVal1 = rightIterator1.Get();
+      unsigned char rightVal2 = rightIterator2.Get();
 
+      int newVal = rightVal1 - rightVal2;
+
+      double strongWeight = 0.75;
+      double weakWeight = 1 - strongWeight;
+
+      newVal = newVal + rightVal1;
+
+      if (newVal < 0){
+          newVal = 0;
+      }
+      if (newVal > 255){
+          newVal = 255;
+      }
+     // wrongIterator.Set(newVal);
+
+      if (rightVal1 == rightVal2){
+          wrongIterator.Set(rightVal1);
+      }
+      else if (rightVal1 > rightVal2){ // 2nd is darker than 1st
+          // weight the 2nd more than the 1st
+
+          wrongIterator.Set((rightVal1 * weakWeight) + (rightVal2 * strongWeight));
+      }
+      else { // 1st is darker than 2nd
+          // weight the 1st more than the 2nd
+
+          wrongIterator.Set((rightVal1 * strongWeight) + rightVal2 * weakWeight);
+      }
       ++wrongIterator;
       ++rightIterator1;
       ++rightIterator2;
     }
-*/
+
     //////////////////////////////////
     /// Display results
     //////////////////////////////////
@@ -211,7 +181,7 @@ int main(int, char **)
     QuickView viewer;
 
     if (erroneous == 1){
-        viewer.AddImage(resizeFilter2->GetOutput(),//image1.GetPointer(),
+        viewer.AddImage(image1.GetPointer(),
                         true,
                         "This image is interpolated");
         viewer.AddImage(image2.GetPointer());
@@ -221,7 +191,7 @@ int main(int, char **)
     else if (erroneous == 2){
 
         viewer.AddImage(image1.GetPointer());
-        viewer.AddImage(resizeFilter2->GetOutput(),//image2.GetPointer(),
+        viewer.AddImage(image2.GetPointer(),
                         true,
                         "This image is interpolated");
         viewer.AddImage(image3.GetPointer());
@@ -231,7 +201,7 @@ int main(int, char **)
 
         viewer.AddImage(image1.GetPointer());
         viewer.AddImage(image2.GetPointer());
-        viewer.AddImage(metric->GetOutput(),//image3.GetPointer(),
+        viewer.AddImage(image3.GetPointer(),
                         true,
                         "This image is interpolated");
     }
